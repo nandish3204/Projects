@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Approval Workflow</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+        <div class="glow-orb orb-3"></div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-overlay" class="auth-overlay active">
+        <div class="auth-card glass-panel">
+            <div class="auth-icon"><i class="fa-solid fa-fingerprint"></i></div>
+            <h2>System Authentication</h2>
+            <p>Enter your assigned credentials to access the workflow.</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="e.g. user1" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Security Key</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <span>Authenticate</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+                <!-- <div class="auth-hint">
+                    <small>For demo: user1/pass1 (Lvl 1), user2/pass2 (Lvl 2), etc. up to user5</small>
+                </div> -->
+            </form>
+            <div id="login-error" class="error-msg hidden">Invalid credentials. Access denied.</div>
+        </div>
+    </div>
+
+    <main class="app-container hidden" id="main-app">
+        <!-- Top Nav -->
+        <nav class="user-nav glass-panel">
+            <div class="user-info">
+                <div class="avatar"><i class="fa-solid fa-user-tie"></i></div>
+                <div>
+                    <div class="user-name" id="display-name">John Doe</div>
+                    <div class="user-role badge" id="display-role">Data Entry Specialist</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" id="logout-btn">
+                <i class="fa-solid fa-power-off"></i> Disconnect
+            </button>
+        </nav>
+
+        <header class="app-header">
+            <div class="header-content">
+                <!-- <span class="badge">System Protocol 7X</span> -->
+                <h1>Document Authorization Center</h1>
+                <!-- <p>Manage multiple documents through the 5-tiered enterprise approval matrix.</p> -->
+            </div>
+        </header>
+
+        <!-- Dashboard View -->
+        <section id="dashboard-view">
+            <!-- Upload Section -->
+            <div id="upload-section" class="glass-panel mb-4">
+                <div class="section-header">
+                    <div class="icon-wrap"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3>Initiate</h3>
+                </div>
+                <p class="section-desc">Upload one or multiple documents to enter them into the approval pipeline.</p>
+                <div class="upload-group">
+                    <label for="multi-file-input" class="upload-label">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        <span id="multi-upload-text">Browse Documents</span>
+                        <!-- <small>Supports any file type (Mocked storage with base64)</small> -->
+                    </label>
+                    <input type="file" id="multi-file-input" class="file-input" multiple>
+                </div>
+            </div>
+
+            <!-- Documents Lists -->
+            <div class="dashboard-lists">
+                <div class="list-container">
+                    <h3 class="section-title text-accent">
+                        <i class="fa-solid fa-circle-exclamation pulse-icon"></i>
+                        Action Required (<span id="action-count">0</span>)
+                    </h3>
+                    <div id="action-docs-grid" class="docs-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="list-container mt-4">
+                    <h3 class="section-title text-muted">
+                        <i class="fa-solid fa-layer-group"></i>
+                        All Pipeline Documents (<span id="all-count">0</span>)
+                    </h3>
+                    <div id="all-docs-grid" class="docs-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Single Document Timeline View -->
+        <section id="timeline-view" class="hidden">
+            <button class="btn btn-secondary mb-4" id="back-to-dash-btn">
+                <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+            </button>
+
+            <!-- Current File Header -->
+            <div class="file-status-pane glass-panel mb-4">
+                <div class="file-icon"><i class="fa-solid fa-file-contract"></i></div>
+                <div class="file-details">
+                    <h3 id="active-doc-name">Document Name</h3>
+                    <p>ID: <span id="active-doc-id">...</span> • Uploaded by <span id="active-doc-uploader">...</span>
+                    </p>
+                </div>
+                <div class="file-actions">
+                    <button class="btn btn-secondary download-btn" id="active-doc-download">
+                        <i class="fa-solid fa-download"></i> Download File
+                    </button>
+                </div>
+            </div>
+
+            <div class="progress-container mb-4">
+                <div class="progress-bar-wrap">
+                    <div class="progress-fill" id="overall-progress"></div>
+                </div>
+                <div class="progress-text"><span id="progress-percentage">0</span>% Completed</div>
+            </div>
+
+            <div class="workflow-timeline" id="workflow-container">
+                <div class="timeline-line">
+                    <div class="timeline-line-fill" id="timeline-fill"></div>
+                </div>
+
+                <!-- Level 1 -->
+                <article class="workflow-card" data-level="1">
+                    <div class="card-indicator">
+                        <div class="pulse-ring"></div>
+                        <div class="step-number">1</div>
+                    </div>
+                    <div class="card-content glass-panel">
+                        <div class="card-header">
+                            <div class="role-info">
+                                <i class="fa-solid fa-keyboard role-icon"></i>
+                                <h2>Data Entry Specialist</h2>
+                            </div>
+                            <span class="status-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <p>Initial data package submission and validation.</p>
+                            <div class="action-area hidden">
+                                <div class="btn-group">
+                                    <button class="btn btn-danger delete-btn" data-target="1"
+                                        style="border-style: dashed; background: rgba(220, 38, 38, 0.2);">
+                                        <i class="fa-solid fa-trash"></i> <span>Delete</span>
+                                    </button>
+                                    <button class="btn btn-danger reject-btn" data-target="1">
+                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
+                                    </button>
+                                    <button class="btn btn-primary approve-btn" data-target="1">
+                                        <span>Verify & Forward</span>
+                                        <i class="fa-solid fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="restricted-area hidden">
+                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required to
+                                    action this level</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Level 2 -->
+                <article class="workflow-card" data-level="2">
+                    <div class="card-indicator">
+                        <div class="pulse-ring"></div>
+                        <div class="step-number">2</div>
+                    </div>
+                    <div class="card-content glass-panel">
+                        <div class="card-header">
+                            <div class="role-info">
+                                <i class="fa-solid fa-magnifying-glass-chart role-icon"></i>
+                                <h2>Quality Assurance Analyst</h2>
+                            </div>
+                            <span class="status-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <p>Comprehensive quality check and data accuracy validation.</p>
+                            <div class="action-area hidden">
+                                <div class="btn-group">
+                                    <button class="btn btn-danger reject-btn" data-target="2">
+                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
+                                    </button>
+                                    <button class="btn btn-primary approve-btn" data-target="2">
+                                        <span>Approve Quality</span> <i class="fa-solid fa-check"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="restricted-area hidden">
+                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Level 3 -->
+                <article class="workflow-card" data-level="3">
+                    <div class="card-indicator">
+                        <div class="pulse-ring"></div>
+                        <div class="step-number">3</div>
+                    </div>
+                    <div class="card-content glass-panel">
+                        <div class="card-header">
+                            <div class="role-info">
+                                <i class="fa-solid fa-users-gear role-icon"></i>
+                                <h2>Operations Manager</h2>
+                            </div>
+                            <span class="status-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <p>Operational feasibility assessment and resource allocation.</p>
+                            <div class="action-area hidden">
+                                <div class="btn-group">
+                                    <button class="btn btn-danger reject-btn" data-target="3">
+                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
+                                    </button>
+                                    <button class="btn btn-primary approve-btn" data-target="3">
+                                        <span>Authorize Execution</span> <i class="fa-solid fa-file-signature"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="restricted-area hidden">
+                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Level 4 -->
+                <article class="workflow-card" data-level="4">
+                    <div class="card-indicator">
+                        <div class="pulse-ring"></div>
+                        <div class="step-number">4</div>
+                    </div>
+                    <div class="card-content glass-panel">
+                        <div class="card-header">
+                            <div class="role-info">
+                                <i class="fa-solid fa-globe role-icon"></i>
+                                <h2>Regional Director</h2>
+                            </div>
+                            <span class="status-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <p>Strategic alignment, budget overview, and regional endorsement.</p>
+                            <div class="action-area hidden">
+                                <div class="btn-group">
+                                    <button class="btn btn-danger reject-btn" data-target="4">
+                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
+                                    </button>
+                                    <button class="btn btn-primary approve-btn" data-target="4">
+                                        <span>Endorse Strategy</span> <i class="fa-solid fa-stamp"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="restricted-area hidden">
+                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Level 5 -->
+                <article class="workflow-card" data-level="5">
+                    <div class="card-indicator">
+                        <div class="pulse-ring"></div>
+                        <div class="step-number">5</div>
+                    </div>
+                    <div class="card-content glass-panel">
+                        <div class="card-header">
+                            <div class="role-info">
+                                <i class="fa-solid fa-user-shield role-icon"></i>
+                                <h2>System Administrator</h2>
+                            </div>
+                            <span class="status-badge"></span>
+                        </div>
+                        <div class="card-body">
+                            <p>Final system integration, security checks, and deployment.</p>
+                            <div class="action-area hidden">
+                                <div class="btn-group">
+                                    <button class="btn btn-danger reject-btn" data-target="5">
+                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
+                                    </button>
+                                    <button class="btn btn-primary approve-btn final-approve" data-target="5">
+                                        <span>Final Deployment</span> <i class="fa-solid fa-rocket"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="restricted-area hidden">
+                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Completion State -->
+                <div class="completion-message hidden" id="completion-state">
+                    <div class="glass-panel success-panel">
+                        <div class="success-icon-wrap">
+                            <i class="fa-solid fa-check-double"></i>
+                        </div>
+                        <h2>Workflow Complete!</h2>
+                        <p>This document is fully authorized and integrated.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Canvas for Confetti -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Custom Notifications -->
+    <div id="notification-container"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
