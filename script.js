@@ -296,8 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const actionArea = card.querySelector('.action-area');
             const restrictedArea = card.querySelector('.restricted-area');
 
-            actionArea.classList.add('hidden');
-            restrictedArea.classList.add('hidden');
+            if (actionArea) actionArea.classList.add('hidden');
+            if (restrictedArea) restrictedArea.classList.add('hidden');
 
             // Logic matching the old system but tied to the single WF
             if (i < curLevel || (i === curLevel && wf.status === 'completed')) {
@@ -311,9 +311,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 badge.innerHTML = 'Action Required';
 
                 if (currentUser && currentUser.level === i) {
-                    actionArea.classList.remove('hidden');
+                    if (actionArea) actionArea.classList.remove('hidden');
+                    else if (restrictedArea) restrictedArea.classList.remove('hidden');
                 } else {
-                    restrictedArea.classList.remove('hidden');
+                    if (restrictedArea) restrictedArea.classList.remove('hidden');
                 }
 
             } else if (i === curLevel && wf.status === 'rejected') {
@@ -322,9 +323,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 badge.innerHTML = 'Rejected <i class="fa-solid fa-xmark ml-1"></i>';
 
                 if (currentUser && currentUser.level === i) {
-                    actionArea.classList.remove('hidden');
+                    if (actionArea) actionArea.classList.remove('hidden');
+                    else if (restrictedArea) restrictedArea.classList.remove('hidden');
                 } else {
-                    restrictedArea.classList.remove('hidden');
+                    if (restrictedArea) restrictedArea.classList.remove('hidden');
                 }
             } else {
                 card.classList.add('pending');
