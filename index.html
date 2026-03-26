@@ -37,13 +37,25 @@
                     <label for="password">Security Key</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">
+                <div class="form-group register-field hidden" id="level-group">
+                    <label for="reg-level">Access Level</label>
+                    <select id="reg-level" class="form-control"
+                        style="background: rgba(25, 33, 50, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.8rem; width: 100%; border-radius: 6px;">
+                        <option value="1">1 - Data Entry Specialist</option>
+                        <option value="2">2 - Quality Assurance Analyst</option>
+                        <option value="3">3 - Operations Manager</option>
+                        <option value="4">4 - Regional Director</option>
+                        <option value="5">5 - System Administrator</option>
+                    </select>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="btn btn-primary w-100 mb-2">
                     <span>Authenticate</span>
                     <i class="fa-solid fa-arrow-right-to-bracket"></i>
                 </button>
-                <!-- <div class="auth-hint">
-                    <small>For demo: user1/pass1 (Lvl 1), user2/pass2 (Lvl 2), etc. up to user5</small>
-                </div> -->
+                <div class="auth-hint text-center mt-3">
+                    <a href="#" id="toggle-auth-mode" style="color: #3b82f6; text-decoration: none;">Need an account?
+                        Register new user</a>
+                </div>
             </form>
             <div id="login-error" class="error-msg hidden">Invalid credentials. Access denied.</div>
         </div>
@@ -133,6 +145,10 @@
                     <button class="btn btn-secondary download-btn" id="active-doc-download">
                         <i class="fa-solid fa-download"></i> Download File
                     </button>
+                    <button class="btn btn-danger delete-btn hidden" id="global-delete-btn"
+                        style="border-style: dashed; background: rgba(220, 38, 38, 0.2); margin-left: 10px;">
+                        <i class="fa-solid fa-trash"></i> Delete Document
+                    </button>
                 </div>
             </div>
 
@@ -164,24 +180,9 @@
                         </div>
                         <div class="card-body">
                             <p>Initial data package submission and validation.</p>
-                            <div class="action-area hidden">
-                                <div class="btn-group">
-                                    <button class="btn btn-danger delete-btn" data-target="1"
-                                        style="border-style: dashed; background: rgba(220, 38, 38, 0.2);">
-                                        <i class="fa-solid fa-trash"></i> <span>Delete</span>
-                                    </button>
-                                    <button class="btn btn-danger reject-btn" data-target="1">
-                                        <i class="fa-solid fa-xmark"></i> <span>Reject</span>
-                                    </button>
-                                    <button class="btn btn-primary approve-btn" data-target="1">
-                                        <span>Verify & Forward</span>
-                                        <i class="fa-solid fa-arrow-right"></i>
-                                    </button>
-                                </div>
-                            </div>
                             <div class="restricted-area hidden">
-                                <p class="warning-text"><i class="fa-solid fa-lock"></i> Authentication required to
-                                    action this level</p>
+                                <p class="warning-text"><i class="fa-solid fa-info-circle"></i> Document is managed from
+                                    here. Awaiting next phase.</p>
                             </div>
                         </div>
                     </div>
@@ -340,7 +341,6 @@
     <div id="notification-container"></div>
 
     <script src="script.js"></script>
-    
 </body>
 
 </html>
