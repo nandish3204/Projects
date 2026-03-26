@@ -40,8 +40,16 @@ const workflowSchema = new mongoose.Schema({
     timestamp: Number
 });
 
+const logSchema = new mongoose.Schema({
+    action: String,
+    documentName: String,
+    username: String,
+    timestamp: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Workflow = mongoose.model('Workflow', workflowSchema);
+const Log = mongoose.model('Log', logSchema);
 
 
 
@@ -131,6 +139,22 @@ app.delete('/api/workflows/:id', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// --- LOG ROUTES ---
+app.get('/api/logs', async (req, res) => {
+    try {
+        const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
+        res.json(logs);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/logs', async (req, res) => {
+    try {
+        const newLog = new Log(req.body);
+        await newLog.save();
+        res.json(newLog);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => {
