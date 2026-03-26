@@ -136,9 +136,52 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDashboard();
     }
 
+    // --- AUDIT LOG UTILS ---
+    async function writeLog(action, documentName) {
+        if (!currentUser) return;
+        try {
+            await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, documentName, username: currentUser.username })
+            });
+            await renderAuditLogs();
+        } catch (e) { console.error('Log Error:', e); }
+    }
+
+    async function renderAuditLogs() {
+        const logBody = document.getElementById('audit-log-body');
+        if (!logBody) return;
+        try {
+            const res = await fetch('/api/logs');
+            const logs = await res.json();
+            logBody.innerHTML = '';
+
+            if (logs.length === 0) {
+                logBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;" class="text-muted">No history found.</td></tr>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                tr.innerHTML = `
+                    <td style="padding: 12px 8px; font-size: 0.85em;">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td style="padding: 12px 8px;"><strong>${log.username}</strong></td>
+                    <td style="padding: 12px 8px;">${log.action}</td>
+                    <td style="padding: 12px 8px;"><span style="color:#3b82f6;">${log.documentName}</span></td>
+                `;
+                logBody.appendChild(tr);
+            });
+        } catch (e) {
+            logBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color:#ef4444;">Failed to load logs</td></tr>';
+        }
+    }
+
     // --- DASHBOARD RENDER ---
     async function renderDashboard() {
         workflows = await initDB(); // fetch from API
+        await renderAuditLogs();
 
         actionDocsGrid.innerHTML = '';
         allDocsGrid.innerHTML = '';
@@ -224,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newWf)
                     });
+                    await writeLog('Uploaded Document', file.name);
                 } catch (err) { console.error('Upload Error:', err); }
 
                 workflows.push(newWf);
@@ -362,9 +406,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 wf.currentLevel = target + 1;
                 wf.status = 'pending';
                 showNotification("Approved step " + target + ". Assigned to Level " + (target + 1) + ".", 'success');
+                await writeLog(`Approved Level ${target}`, wf.filename);
             } else {
                 wf.status = 'completed';
                 showNotification("Final Approval complete!", 'success');
+                await writeLog(`Final Approval (Level 5)`, wf.filename);
             }
 
             try {
@@ -395,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } catch (err) { }
             showNotification("Request rejected. Returned to Level " + prevLevel + ".", 'error');
+            await writeLog(`Rejected at Level ${target}`, wf.filename);
             renderTimeline();
         });
     });
@@ -403,10 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', async function () {
             if (!confirm("Are you sure you want to completely discard this workflow? This cannot be undone.")) return;
 
+            const wfToDelete = workflows.find(w => w.id === currentWorkflowId);
             workflows = workflows.filter(w => w.id !== currentWorkflowId);
 
             try {
                 await fetch(`/api/workflows/${currentWorkflowId}`, { method: 'DELETE' });
+                await writeLog('Permanently Deleted', wfToDelete ? wfToDelete.filename : 'Unknown Document');
             } catch (err) { }
 
             showNotification("Workflow document permanently deleted.", 'success');
