@@ -4,40 +4,30 @@ window.onerror = function (msg, url, line, col, err) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- PSEUDO BACKEND (LocalStorage) ---
-    const DB_KEY = 'enterprise_workflow_db_v2';
-    let memoryDB = [];
-
-    const USERS = [
-        { username: 'user1', password: 'pass1', level: 1, role: 'Data Entry Specialist' },
-        { username: 'user2', password: 'pass2', level: 2, role: 'QA Analyst' },
-        { username: 'user3', password: 'pass3', level: 3, role: 'Ops Manager' },
-        { username: 'user4', password: 'pass4', level: 4, role: 'Regional Director' },
-        { username: 'user5', password: 'pass5', level: 5, role: 'System Admin' }
-    ];
-
-    function initDB() {
+    // --- BACKEND (Express API) ---
+    async function initDB() {
         try {
-            if (!localStorage.getItem(DB_KEY)) {
-                saveDB([]);
-            }
-            return JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            const res = await fetch('/api/workflows');
+            return await res.json();
         } catch (e) {
-            console.warn("Storage restricted, using memory", e);
-            return memoryDB;
+            console.warn("API restricted, using empty memory", e);
+            return [];
         }
     }
 
-    function saveDB(data) {
-        memoryDB = data;
+    async function saveDB(data) {
         try {
-            localStorage.setItem(DB_KEY, JSON.stringify(data));
+            await fetch('/api/workflows', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
         } catch (e) { }
     }
 
     // --- STATE MANAGEMENT ---
     let currentUser = null;
-    let workflows = initDB();
+    let workflows = [];
     let currentWorkflowId = null;
 
     // --- DOM ELEMENTS ---
@@ -75,27 +65,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- AUTHENTICATION ---
-    loginForm.addEventListener('submit', (e) => {
+    let isRegisterMode = false;
+    const toggleAuth = document.getElementById('toggle-auth-mode');
+    const levelGroup = document.getElementById('level-group');
+    const authBtnText = document.querySelector('#auth-submit-btn span');
+
+    if (toggleAuth) {
+        toggleAuth.addEventListener('click', (e) => {
+            e.preventDefault();
+            isRegisterMode = !isRegisterMode;
+            if (isRegisterMode) {
+                levelGroup.classList.remove('hidden');
+                toggleAuth.textContent = 'Already have an account? Login';
+                authBtnText.textContent = 'Register New User';
+            } else {
+                levelGroup.classList.add('hidden');
+                toggleAuth.textContent = 'Need an account? Register new user';
+                authBtnText.textContent = 'Authenticate';
+            }
+        });
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const userVal = document.getElementById('username').value.trim();
         const passVal = document.getElementById('password').value.trim();
 
-        const user = USERS.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
+        try {
+            let endpoint = isRegisterMode ? '/api/register' : '/api/login';
+            let bodyData = { username: userVal, password: passVal };
+            if (isRegisterMode) bodyData.level = document.getElementById('reg-level').value;
 
-        if (user) {
-            currentUser = user;
-            try { sessionStorage.setItem('current_user', JSON.stringify(user)); } catch (e) { }
-            loginError.classList.add('hidden');
-            document.getElementById('password').value = '';
-            handleLoginSuccess();
-            showNotification(`Welcome back, ${user.role}`, 'success');
-        } else {
-            loginError.classList.remove('hidden');
-            loginForm.closest('.auth-card').animate([
-                { transform: 'translateX(0)' }, { transform: 'translateX(-10px)' },
-                { transform: 'translateX(10px)' }, { transform: 'translateX(-10px)' },
-                { transform: 'translateX(10px)' }, { transform: 'translateX(0)' }
-            ], { duration: 400 });
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyData)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                currentUser = data;
+                try { sessionStorage.setItem('current_user', JSON.stringify(data)); } catch (e) { }
+                loginError.classList.add('hidden');
+                document.getElementById('password').value = '';
+                handleLoginSuccess();
+                showNotification(isRegisterMode ? `Registered successfully, ${data.role}` : `Welcome back, ${data.role}`, 'success');
+            } else {
+                loginError.textContent = data.error || 'Invalid credentials. Access denied.';
+                loginError.classList.remove('hidden');
+                loginForm.closest('.auth-card').animate([
+                    { transform: 'translateX(0)' }, { transform: 'translateX(-10px)' },
+                    { transform: 'translateX(10px)' }, { transform: 'translateX(-10px)' },
+                    { transform: 'translateX(10px)' }, { transform: 'translateX(0)' }
+                ], { duration: 400 });
+            }
+        } catch (e) {
+            console.error('Auth Error', e);
         }
     });
 
@@ -120,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- DASHBOARD RENDER ---
-    function renderDashboard() {
-        workflows = initDB(); // fresh pull
+    async function renderDashboard() {
+        workflows = await initDB(); // fetch from API
 
         actionDocsGrid.innerHTML = '';
         allDocsGrid.innerHTML = '';
@@ -179,22 +204,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- MULTI-FILE UPLOAD ---
-    multiFileInput.addEventListener('change', (e) => {
+    multiFileInput.addEventListener('change', async (e) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
         let processed = 0;
-        workflows = initDB();
+        workflows = await initDB();
 
         Array.from(files).forEach(file => {
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const newWf = {
                     id: Date.now() + Math.random().toString(36).substr(2, 9),
                     filename: file.name,
                     dataSize: file.size,
                     dataUrl: event.target.result, // base64
-                    currentLevel: 1, // Start at level 1
+                    currentLevel: 2, // Auto-forward to Level 2 since Level 1 only uploads
                     status: 'pending',
                     uploader: currentUser.username,
                     timestamp: Date.now()
@@ -203,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 processed++;
 
                 if (processed === files.length) {
-                    saveDB(workflows);
+                    await saveDB(workflows);
                     showNotification("Successfully initiated " + files.length + " document flows", 'success');
                     multiFileInput.value = ''; // clear
                     multiUploadText.textContent = 'Browse or Drag & Drop Documents';
@@ -229,8 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTimeline();
     }
 
-    function renderTimeline() {
-        workflows = initDB();
+    async function renderTimeline() {
+        workflows = await initDB();
         const wf = workflows.find(w => w.id === currentWorkflowId);
         if (!wf) return;
 
@@ -247,6 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             showNotification('Download started', 'success');
         };
+
+        const globalDeleteBtn = document.getElementById('global-delete-btn');
+        if (globalDeleteBtn) {
+            // Only Level 1 can delete, and only before Level 2 approves it (meaning it hasn't reached Level 3 yet)
+            if (currentUser && currentUser.level === 1 && wf.currentLevel <= 2 && wf.status !== 'completed') {
+                globalDeleteBtn.classList.remove('hidden');
+            } else {
+                globalDeleteBtn.classList.add('hidden');
+            }
+        }
 
         const totalSteps = 5;
         const curLevel = wf.currentLevel;
@@ -316,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ACTIONS ---
     document.querySelectorAll('.approve-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', async function () {
             const target = parseInt(this.getAttribute('data-target'));
             let wf = workflows.find(w => w.id === currentWorkflowId);
 
@@ -329,13 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification("Final Approval complete!", 'success');
             }
 
-            saveDB(workflows);
+            await saveDB(workflows);
             renderTimeline();
         });
     });
 
     document.querySelectorAll('.reject-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', async function () {
             const target = parseInt(this.getAttribute('data-target'));
             let wf = workflows.find(w => w.id === currentWorkflowId);
 
@@ -343,18 +378,18 @@ document.addEventListener('DOMContentLoaded', () => {
             wf.currentLevel = prevLevel;
             wf.status = 'rejected';
 
-            saveDB(workflows);
+            await saveDB(workflows);
             showNotification("Request rejected. Returned to Level " + prevLevel + ".", 'error');
             renderTimeline();
         });
     });
 
     document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', async function () {
             if (!confirm("Are you sure you want to completely discard this workflow? This cannot be undone.")) return;
 
             workflows = workflows.filter(w => w.id !== currentWorkflowId);
-            saveDB(workflows);
+            await saveDB(workflows);
 
             showNotification("Workflow document permanently deleted.", 'success');
             backToDashBtn.click(); // Navigates back successfully
