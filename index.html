@@ -121,8 +121,35 @@
                         All Pipeline Documents (<span id="all-count">0</span>)
                     </h3>
                     <div id="all-docs-grid" class="docs-grid">
-                        <!-- Populated by JS -->
                     </div>
+                </div>
+            </div>
+
+            <!-- Audit Logs -->
+            <div id="logs-section" class="glass-panel mt-4 mb-4">
+                <div class="section-header">
+                    <div class="icon-wrap"><i class="fa-solid fa-clipboard-list"></i></div>
+                    <h3>Activity & Audit History</h3>
+                </div>
+                <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table"
+                        style="width: 100%; text-align: left; color: #cbd5e1; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: rgba(15, 23, 42, 0.95);">
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 12px 8px;">Date & Time</th>
+                                <th style="padding: 12px 8px;">Username</th>
+                                <th style="padding: 12px 8px;">Action</th>
+                                <th style="padding: 12px 8px;">Document Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-log-body">
+                            <!-- Populated by JS -->
+                            <tr>
+                                <td colspan="4" style="text-align:center; padding: 20px;" class="text-muted"><i
+                                        class="fa-solid fa-spinner fa-spin"></i> Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
