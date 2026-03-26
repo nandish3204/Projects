@@ -14,8 +14,12 @@ app.use(express.static(__dirname)); // Serve HTML/CSS/JS
 // --- MONGODB CONNECTION ---
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/workflowDB';
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('Connected to MongoDB Atlas!'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .then(() => {
+        console.log('Connected to MongoDB Atlas!');
+    })
+    .catch(err => {
+        console.error('MongoDB connection error. Make sure your MONGO_URI is set!', err.message);
+    });
 
 // --- SCHEMAS & MODELS ---
 const userSchema = new mongoose.Schema({
@@ -39,21 +43,7 @@ const workflowSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Workflow = mongoose.model('Workflow', workflowSchema);
 
-// --- SEED DEFAULT USERS (If Empty) ---
-async function seedUsers() {
-    const count = await User.countDocuments();
-    if (count === 0) {
-        await User.insertMany([
-            { username: 'user1', password: 'pass1', level: 1, role: 'Data Entry Specialist' },
-            { username: 'user2', password: 'pass2', level: 2, role: 'QA Analyst' },
-            { username: 'user3', password: 'pass3', level: 3, role: 'Ops Manager' },
-            { username: 'user4', password: 'pass4', level: 4, role: 'Regional Director' },
-            { username: 'user5', password: 'pass5', level: 5, role: 'System Admin' }
-        ]);
-        console.log('Seeded default users!');
-    }
-}
-seedUsers();
+
 
 // --- AUTH ROUTES ---
 app.post('/api/register', async (req, res) => {
@@ -75,7 +65,7 @@ app.post('/api/register', async (req, res) => {
 
         const newUser = new User({
             username,
-            password, // NOTE: In a true production app, use bcrypt to hash this!
+            password,
             level: numLevel,
             role: roles[numLevel] || 'User'
         });
@@ -113,7 +103,6 @@ app.get('/api/workflows', async (req, res) => {
 
 app.post('/api/workflows', async (req, res) => {
     try {
-        // Create a single workflow
         const newWorkflow = new Workflow(req.body);
         await newWorkflow.save();
         res.json(newWorkflow);
