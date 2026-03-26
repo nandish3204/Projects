@@ -15,15 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function saveDB(data) {
-        try {
-            await fetch('/api/workflows', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-        } catch (e) { }
-    }
+    // Single document modifications now interact with backend individually
 
     // --- STATE MANAGEMENT ---
     let currentUser = null;
@@ -224,11 +216,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploader: currentUser.username,
                     timestamp: Date.now()
                 };
+
+                // Save individually to backend
+                try {
+                    await fetch('/api/workflows', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newWf)
+                    });
+                } catch (err) { console.error('Upload Error:', err); }
+
                 workflows.push(newWf);
                 processed++;
 
                 if (processed === files.length) {
-                    await saveDB(workflows);
                     showNotification("Successfully initiated " + files.length + " document flows", 'success');
                     multiFileInput.value = ''; // clear
                     multiUploadText.textContent = 'Browse or Drag & Drop Documents';
@@ -366,7 +367,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification("Final Approval complete!", 'success');
             }
 
-            await saveDB(workflows);
+            try {
+                await fetch(`/api/workflows/${wf.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wf)
+                });
+            } catch (err) { }
             renderTimeline();
         });
     });
@@ -380,7 +387,13 @@ document.addEventListener('DOMContentLoaded', () => {
             wf.currentLevel = prevLevel;
             wf.status = 'rejected';
 
-            await saveDB(workflows);
+            try {
+                await fetch(`/api/workflows/${wf.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wf)
+                });
+            } catch (err) { }
             showNotification("Request rejected. Returned to Level " + prevLevel + ".", 'error');
             renderTimeline();
         });
@@ -391,7 +404,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!confirm("Are you sure you want to completely discard this workflow? This cannot be undone.")) return;
 
             workflows = workflows.filter(w => w.id !== currentWorkflowId);
-            await saveDB(workflows);
+
+            try {
+                await fetch(`/api/workflows/${currentWorkflowId}`, { method: 'DELETE' });
+            } catch (err) { }
 
             showNotification("Workflow document permanently deleted.", 'success');
             backToDashBtn.click(); // Navigates back successfully
