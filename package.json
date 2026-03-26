@@ -1,9 +1,25 @@
 {
-  "name": "my-website",
+  "name": "workflow-project",
   "version": "1.0.0",
-  "description": "Simple static website",
+  "description": "Enterprise Approval Workflow Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nandish3204/Projects.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nandish3204/Projects/issues"
+  },
+  "homepage": "https://github.com/nandish3204/Projects#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
   }
 }
